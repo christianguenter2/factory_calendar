@@ -56,6 +56,12 @@
      <MSGNR>008</MSGNR>
      <TEXT>From date has to before to Date</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZFC_MAINT</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>Overlapping periods are not allowed</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

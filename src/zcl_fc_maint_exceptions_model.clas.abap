@@ -35,6 +35,8 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
           zcx_fc_error,
 
       validate
+        IMPORTING
+          i_exceptions TYPE tt_exception OPTIONAL
         RAISING
           zcx_fc_error,
 
@@ -61,6 +63,17 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
 
     DATA calendar_id TYPE tfain-ident.
     DATA year TYPE tfain-jahr.
+
+    METHODS prepare_db_operations
+      IMPORTING
+        i_exceptions    TYPE tt_exception
+      EXPORTING
+        e_tfain_inserts TYPE tt_tfain
+        e_tfain_updates TYPE tt_tfain
+        e_tfain_deletes TYPE tt_tfain
+        e_tfait_inserts TYPE tt_tfait
+        e_tfait_updates TYPE tt_tfait
+        e_tfait_deletes TYPE tt_tfait.
 
 ENDCLASS.
 
@@ -135,42 +148,7 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e002(zfc_maint) WITH calendar_id year.
     ENDIF.
 
-  ENDMETHOD.
-
-
-  METHOD save_exceptions.
-
-    DATA:
-      tfain_inserts TYPE tt_tfain,
-      tfain_updates TYPE tt_tfain,
-      tfain_deletes TYPE tt_tfain,
-      tfain         TYPE LINE OF tt_tfain,
-      tfain_db      TYPE tt_tfain,
-
-      tfait_inserts TYPE tt_tfait,
-      tfait_updates TYPE tt_tfait,
-      tfait_deletes TYPE tt_tfait,
-      tfait         TYPE LINE OF tt_tfait,
-      tfait_db      TYPE tt_tfait.
-
-    existence_check( ).
-    validate( ).
-
-    SELECT
-      FROM tfain
-      FIELDS *
-      WHERE ident = @calendar_id
-      AND jahr = @year
-      INTO TABLE @tfain_db.
-
-    SELECT
-      FROM tfait
-      FIELDS *
-      WHERE spra  = @sy-langu
-      AND   ident = @calendar_id
-      AND   jahr  = @year
-      INTO TABLE @tfait_db.
-
+    " check single exceptions
     LOOP AT i_exceptions ASSIGNING FIELD-SYMBOL(<exception>).
 
       IF <exception>-von IS INITIAL.
@@ -193,51 +171,43 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
         RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e008(zfc_maint).
       ENDIF.
 
-      tfain = CORRESPONDING #(  <exception> ).
-      tfain-ident = calendar_id.
-      tfain-jahr  = year.
-
-      IF line_exists( tfain_db[ ident = tfain-ident
-                                jahr  = tfain-jahr
-                                von   = tfain-von
-                                bis   = tfain-bis ] ).
-        tfain_updates = VALUE #( BASE tfain_updates ( tfain ) ).
-      ELSE.
-        tfain_inserts = VALUE #( BASE tfain_inserts ( tfain ) ).
-      ENDIF.
-
-      tfait = CORRESPONDING #( <exception> ).
-      tfait-spra  = sy-langu.
-      tfait-ident = calendar_id.
-      tfait-jahr  = year.
-
-      IF line_exists( tfait_db[ spra  = tfait-spra
-                                ident = tfait-ident
-                                jahr  = tfait-jahr
-                                von   = tfait-von ] ).
-        tfait_updates = VALUE #( BASE tfait_updates ( tfait ) ).
-      ELSE.
-        tfait_inserts = VALUE #( BASE tfait_inserts ( tfait ) ).
-      ENDIF.
-
     ENDLOOP.
 
-    LOOP AT tfain_db ASSIGNING FIELD-SYMBOL(<tfain>).
-
-      IF NOT line_exists( i_exceptions[ von   = <tfain>-von
-                                        bis   = <tfain>-bis ] ).
-        tfain_deletes = VALUE #( BASE tfain_deletes ( <tfain> ) ).
-      ENDIF.
-
-    ENDLOOP.
-
-    LOOP AT tfait_db ASSIGNING FIELD-SYMBOL(<tfait>).
-
-      IF NOT line_exists( i_exceptions[ von   = <tfait>-von ] ).
-        tfait_deletes = VALUE #( BASE tfait_deletes ( <tfait> ) ).
+    " check for overlapping periods
+    LOOP AT i_exceptions ASSIGNING <exception>.
+      SELECT
+        FROM @i_exceptions AS exception
+        FIELDS *
+        WHERE ( von <= @<exception>-von AND bis >= @<exception>-bis )
+        OR    ( von <= @<exception>-bis AND bis >= @<exception>-von )
+        OR    ( bis <= @<exception>-von AND von >= @<exception>-von )
+        OR    ( bis <= @<exception>-bis AND von >= @<exception>-bis )
+        INTO TABLE @DATA(duplicate_exception) ##ITAB_KEY_IN_SELECT.
+      IF sy-dbcnt > 1.
+        RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e009(zfc_maint).
       ENDIF.
     ENDLOOP.
 
+  ENDMETHOD.
+
+
+  METHOD save_exceptions.
+
+    existence_check( ).
+    validate( i_exceptions ).
+
+    prepare_db_operations(
+      EXPORTING
+        i_exceptions = i_exceptions
+      IMPORTING
+        e_tfain_inserts = DATA(tfain_inserts)
+        e_tfain_updates = DATA(tfain_updates)
+        e_tfain_deletes = DATA(tfain_deletes)
+        e_tfait_inserts = DATA(tfait_inserts)
+        e_tfait_updates = DATA(tfait_updates)
+        e_tfait_deletes = DATA(tfait_deletes) ).
+
+    " execute database operations
     IF lines( tfain_deletes ) > 0.
       DELETE tfain FROM TABLE tfain_deletes.
       IF sy-subrc <> 0.
@@ -307,6 +277,80 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
       EXPORTING
         mode_tstc = 'E'
         tcode     = 'SCAL'.
+
+  ENDMETHOD.
+
+
+  METHOD prepare_db_operations.
+
+    DATA:
+      tfain    TYPE LINE OF tt_tfain,
+      tfain_db TYPE tt_tfain,
+
+      tfait    TYPE LINE OF tt_tfait,
+      tfait_db TYPE tt_tfait.
+
+    " prepare inserts, updates and deletes
+    SELECT
+      FROM tfain
+      FIELDS *
+      WHERE ident = @calendar_id
+      AND jahr = @year
+      INTO TABLE @tfain_db.
+
+    SELECT
+      FROM tfait
+      FIELDS *
+      WHERE spra  = @sy-langu
+      AND   ident = @calendar_id
+      AND   jahr  = @year
+      INTO TABLE @tfait_db.
+
+    LOOP AT i_exceptions ASSIGNING FIELD-SYMBOL(<exception>).
+      tfain = CORRESPONDING #(  <exception> ).
+      tfain-ident = calendar_id.
+      tfain-jahr  = year.
+
+      IF line_exists( tfain_db[ ident = tfain-ident
+                                jahr  = tfain-jahr
+                                von   = tfain-von
+                                bis   = tfain-bis ] ).
+        e_tfain_updates = VALUE #( BASE e_tfain_updates ( tfain ) ).
+      ELSE.
+        e_tfain_inserts = VALUE #( BASE e_tfain_inserts ( tfain ) ).
+      ENDIF.
+
+      tfait = CORRESPONDING #( <exception> ).
+      tfait-spra  = sy-langu.
+      tfait-ident = calendar_id.
+      tfait-jahr  = year.
+
+      IF line_exists( tfait_db[ spra  = tfait-spra
+                                ident = tfait-ident
+                                jahr  = tfait-jahr
+                                von   = tfait-von ] ).
+        e_tfait_updates = VALUE #( BASE e_tfait_updates ( tfait ) ).
+      ELSE.
+        e_tfait_inserts = VALUE #( BASE e_tfait_inserts ( tfait ) ).
+      ENDIF.
+
+    ENDLOOP.
+
+    LOOP AT tfain_db ASSIGNING FIELD-SYMBOL(<tfain>).
+
+      IF NOT line_exists( i_exceptions[ von   = <tfain>-von
+                                        bis   = <tfain>-bis ] ).
+        e_tfain_deletes = VALUE #( BASE e_tfain_deletes ( <tfain> ) ).
+      ENDIF.
+
+    ENDLOOP.
+
+    LOOP AT tfait_db ASSIGNING FIELD-SYMBOL(<tfait>).
+
+      IF NOT line_exists( i_exceptions[ von   = <tfait>-von ] ).
+        e_tfait_deletes = VALUE #( BASE e_tfait_deletes ( <tfait> ) ).
+      ENDIF.
+    ENDLOOP.
 
   ENDMETHOD.
 

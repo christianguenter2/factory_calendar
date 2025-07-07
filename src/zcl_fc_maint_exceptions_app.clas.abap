@@ -158,7 +158,8 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         )->button(
             icon  = 'sap-icon://delete'
             text  = 'delete'
-            press = client->_event( 'BUTTON_DELETE' ) ).
+            press = client->_event( 'BUTTON_DELETE' )
+            enabled = client->_bind( editable ) ).
 
     table->columns(
         )->column( )->text( `Gültig von` )->get_parent(
