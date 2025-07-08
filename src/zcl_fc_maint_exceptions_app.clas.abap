@@ -49,7 +49,9 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
     METHODS:
       render,
 
-      go,
+      go
+        IMPORTING
+          i_check_mandatory_fields TYPE abap_bool DEFAULT abap_true,
 
       save,
 
@@ -283,11 +285,14 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         message-text = error->get_text( ).
     ENDTRY.
 
-    IF calendarid IS INITIAL
-    OR year IS INITIAL.
-      message-visible = abap_true.
-      message-type = `Error`.
-      message-text = 'Please enter mandatory fields'(009).
+    IF i_check_mandatory_fields = abap_true.
+      IF calendarid IS INITIAL
+      OR year IS INITIAL
+      OR sales_area IS INITIAL.
+        message-visible = abap_true.
+        message-type = `Error`.
+        message-text = 'Please enter mandatory fields'(009).
+      ENDIF.
     ENDIF.
 
   ENDMETHOD.
@@ -434,7 +439,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
           calendarid = f4_app->mv_shlp_result2.
           CLEAR: f4_active.
 
-          go( ).
+          go( i_check_mandatory_fields = abap_false ).
 
         ENDIF.
 
