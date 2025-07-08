@@ -18,10 +18,10 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
     DATA:
       editable        TYPE abap_bool,
 
-      calendarId      TYPE tfain-ident,
+      sales_area      TYPE zws_de_supplier,
+      calendarid      TYPE tfain-ident,
       year            TYPE c LENGTH 4, " tfain-jahr.
       exceptions      TYPE STANDARD TABLE OF t_exception WITH NON-UNIQUE DEFAULT KEY,
-
 
       placeholder_von TYPE string,
       placeholder_bis TYPE string,
@@ -32,17 +32,22 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
         visible TYPE abap_bool,
       END OF message,
       calendartext      TYPE string,
+      salesarea_text    TYPE string,
       header_valid      TYPE abap_bool,
       check_initialized TYPE abap_bool READ-ONLY,
 
-      dirty             TYPE abap_bool.
+      dirty             TYPE abap_bool,
+
+      scrollupdate      TYPE abap_bool,
+      scroll_values     TYPE z2ui5_if_types=>ty_t_name_value.
 
   PRIVATE SECTION.
     DATA client TYPE REF TO z2ui5_if_client.
     DATA save_event TYPE string.
+    DATA f4_active TYPE abap_bool.
 
     METHODS:
-      initialize,
+      render,
 
       go,
 
@@ -85,7 +90,13 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
         IMPORTING
           i_date        TYPE datum
         RETURNING
-          VALUE(result) TYPE string.
+          VALUE(result) TYPE string,
+
+      on_f4,
+
+      init,
+
+      scroll_to_top.
 
 ENDCLASS.
 
@@ -103,18 +114,22 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
     IF check_initialized = abap_false.
       check_initialized = abap_true.
-      initialize( ).
+      render( ).
     ENDIF.
 
     detect_changes( ).
     dispatch( client->get( )-event ).
+
+    IF message-visible = abap_true.
+      scroll_to_top( ).
+    ENDIF.
 
     client->view_model_update( ).
 
   ENDMETHOD.
 
 
-  METHOD initialize.
+  METHOD render.
 
     DATA: view TYPE REF TO z2ui5_cl_xml_view.
 
@@ -131,6 +146,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
     message-visible = abap_false.
 
     FINAL(page) = view->page(
+                    id             = `page`
                     title          = 'Factory Calendar - Maintain Exceptions'(002)
                     navbuttonpress = client->_event( 'BACK' )
                     shownavbutton  = xsdbool( client->get( )-s_draft-id_prev_app_stack IS NOT INITIAL ) ).
@@ -142,29 +158,38 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         showicon = abap_true
     ).
 
-    page->horizontal_layout(
-               class = `sapUiContentPadding`
+    page->horizontal_layout( class = `sapUiContentPadding`
        )->simple_form( editable = abap_true
        )->content( `form`
+       )->label( text     = get_text_for( sales_area )
+                 labelfor = `inputSalesArea`
+                 required = abap_true
+       )->input( id               = `inputSalesArea`
+                 value            = client->_bind_edit( sales_area )
+                 maxlength        = '4'
+                 submit           = client->_event( `GO` )
+                 valuehelponly    = abap_true
+                 showvaluehelp    = abap_true
+                 valuehelprequest = client->_event( `F4` )
+       )->text( text = client->_bind( salesarea_text )
        )->label( text     = get_text_for( calendarid )
                  labelfor = `inputCalId`
                  required = abap_true
-       )->input( id = `inputCalId`
-                 value = client->_bind_edit( calendarId )
-                 maxlength = '2'
-                 submit = client->_event( `GO` )
-       )->text( text = client->_bind( calendarText )
-       )->label( text     = get_text_for( CONV tfain-jahr( '' ) )
+       )->input( id            = `inputCalId`
+                 value         = client->_bind_edit( calendarid )
+                 maxlength     = '2'
+                 submit        = client->_event( `GO` )
+                 valuehelponly = abap_true
+                 showvaluehelp = abap_true
+                 valuehelprequest = client->_event( `F4` )
+       )->text( text = client->_bind( calendartext )
+       )->label( text     = get_text_for( VALUE jahr( ) )
                  labelfor = `inputYear`
                  required = abap_true
-       )->input( id = `inputYear`
-                 value = client->_bind_edit( year )
+       )->input( id        = `inputYear`
+                 value     = client->_bind_edit( year )
                  maxlength = '4'
-                 submit = client->_event( `GO` )
-*                                  )->label( text     = `Kalender ID`
-*                                            labelfor = `inputCalId`
-*                                  )->input( id = `inputCalId`
-
+                 submit    = client->_event( `GO` )
        )->button(
          text  = `Go`
          type  = `Emphasized`
@@ -192,10 +217,10 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
             enabled = client->_bind( editable ) ).
 
     table->columns(
-        )->column( )->text( get_text_for( CONV tfain-von( ' ' ) ) )->get_parent(
-        )->column( )->text( get_text_for( CONV tfain-bis( ' ' ) ) )->get_parent(
-        )->column( )->text( get_text_for( CONV tfain-wert( ' ' ) ) )->get_parent(
-        )->column( )->text( get_text_for( CONV tfait-ltext( ' ' ) ) ).
+        )->column( )->text( get_text_for( VALUE tfain-von( ) ) )->get_parent(
+        )->column( )->text( get_text_for( VALUE tfain-bis( ) ) )->get_parent(
+        )->column( )->text( get_text_for( VALUE arbtag( ) ) )->get_parent(
+        )->column( )->text( get_text_for( VALUE tfait-ltext( ) ) ).
 
     table->items( )->column_list_item( selected = `{SELKZ}`
         )->cells(
@@ -219,6 +244,9 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
     page->_z2ui5( )->dirty( client->_bind( dirty ) ).
 
+    page->_z2ui5( )->scrolling( setupdate = client->_bind_edit( scrollupdate )
+                                items     = client->_bind_edit( scroll_values ) ).
+
     client->view_display( page->stringify( ) ).
 
   ENDMETHOD.
@@ -226,23 +254,19 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
   METHOD go.
 
-    CLEAR:
-      message-text,
-      message-visible,
-      header_valid,
-      dirty,
-      exceptions,
-      calendartext.
+    init( ).
 
-    calendarId = to_upper( calendarId ).
+    calendarid = to_upper( calendarid ).
 
     FINAL(factory_calendar) = NEW zcl_fc_maint_exceptions_model(
-                                      i_calendar_id = calendarId
+                                      i_calendar_id = calendarid
+                                      i_sales_area  = sales_area
                                       i_year        = EXACT #( year ) ).
 
     TRY.
         factory_calendar->existence_check( ).
-        calendarText = factory_calendar->get_description( ).
+        calendartext = factory_calendar->get_description( ).
+        salesarea_text = factory_calendar->get_salesarea_text( ).
 
         IF year IS NOT INITIAL.
           factory_calendar->validate( ).
@@ -269,7 +293,8 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
       message-visible.
 
     FINAL(factory_calendar) = NEW zcl_fc_maint_exceptions_model(
-                                      i_calendar_id = calendarId
+                                      i_calendar_id = calendarid
+                                      i_sales_area  = sales_area
                                       i_year        = EXACT #( year ) ).
 
     TRY.
@@ -335,7 +360,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
   METHOD detect_changes.
 
     IF year IS INITIAL
-    OR calendarId IS INITIAL.
+    OR calendarid IS INITIAL.
       RETURN.
     ENDIF.
 
@@ -353,7 +378,8 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
     ENDIF.
 
     FINAL(factory_calendar) = NEW zcl_fc_maint_exceptions_model(
-                                      i_calendar_id = calendarId
+                                      i_calendar_id = calendarid
+                                      i_sales_area  = sales_area
                                       i_year        = EXACT #( year ) ).
 
     result = VALUE #(
@@ -393,13 +419,28 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
     TRY.
         FINAL(prev) = client->get_app( client->get( )-s_draft-id_prev_app ).
-        FINAL(confirm_result) = CAST z2ui5_cl_pop_to_confirm( prev )->result( ).
 
-        IF confirm_result = abap_true.
-          dispatch( save_event ).
+        IF f4_active = abap_true.
+
+          FINAL(f4_app) = CAST z2ui5_cl_tool_app_shlp_gen( prev ).
+          sales_area = f4_app->mv_shlp_result.
+          calendarid = f4_app->mv_shlp_result2.
+          CLEAR: f4_active.
+
+          go( ).
+
         ENDIF.
 
-        CLEAR: save_event.
+        IF save_event IS NOT INITIAL.
+          FINAL(confirm_result) = CAST z2ui5_cl_pop_to_confirm( prev )->result( ).
+
+          IF confirm_result = abap_true.
+            dispatch( save_event ).
+          ENDIF.
+
+          CLEAR: save_event.
+
+        ENDIF.
 
       CATCH cx_root.
     ENDTRY.
@@ -433,7 +474,12 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         ENDIF.
       WHEN 'BUTTON_SAVE'.
         save( ).
+      WHEN 'F4'.
+        IF confirm_dataloss_if_dirty( i_event ).
+          on_f4( ).
+        ENDIF.
     ENDCASE.
+
   ENDMETHOD.
 
 
@@ -468,6 +514,43 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
   METHOD date_out.
 
     result = |{ i_date DATE = USER }|.
+
+  ENDMETHOD.
+
+
+  METHOD on_f4.
+
+    init( ).
+
+    f4_active = abap_true.
+
+    client->nav_app_call( z2ui5_cl_tool_app_shlp_gen=>factory(
+                              iv_shlp_id     = 'ZWS_SH_FACTORY_CALENDAR'
+                              iv_popup_title = 'Fabrikkalender auswählen'
+                              iv_autoexec    = abap_true ) ).
+
+  ENDMETHOD.
+
+
+  METHOD init.
+
+    CLEAR:
+      message-text,
+      message-visible,
+      header_valid,
+      dirty,
+      editable,
+      exceptions,
+      calendartext,
+      salesarea_text.
+
+  ENDMETHOD.
+
+
+  METHOD scroll_to_top.
+
+    scroll_values = VALUE #( ( n = `page` v = '0' ) ).
+    scrollupdate = abap_true.
 
   ENDMETHOD.
 

@@ -28,6 +28,7 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
       constructor
         IMPORTING
           i_calendar_id TYPE tfain-ident
+          i_sales_area  TYPE zws_de_supplier
           i_year        TYPE tfain-jahr OPTIONAL,
 
       existence_check
@@ -52,7 +53,10 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
         IMPORTING
           i_exceptions TYPE tt_exception
         RAISING
-          zcx_fc_error.
+          zcx_fc_error,
+      get_salesarea_text
+        RETURNING
+          VALUE(result) TYPE string.
 
   PRIVATE SECTION.
     TYPES:
@@ -63,6 +67,7 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
 
     DATA calendar_id TYPE tfain-ident.
     DATA year TYPE tfain-jahr.
+    DATA sales_area TYPE zws_de_supplier.
 
     METHODS prepare_db_operations
       IMPORTING
@@ -83,6 +88,7 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
   METHOD constructor.
 
     calendar_id = i_calendar_id.
+    sales_area = i_sales_area.
     year = i_year.
 
   ENDMETHOD.
@@ -96,6 +102,16 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
       CATCH cx_fhc_runtime.
         RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e001(zfc_maint) WITH calendar_id.
     ENDTRY.
+
+    SELECT
+      SINGLE FROM zws_i_shop_sales_area_fc
+      FIELDS @abap_true AS exists
+      WHERE factorycalendar = @calendar_id
+      AND   shopsalesarea = @sales_area
+      INTO @FINAL(exists).
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e010(zfc_maint) WITH calendar_id sales_area.
+    ENDIF.
 
   ENDMETHOD.
 
@@ -351,6 +367,18 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
         e_tfait_deletes = VALUE #( BASE e_tfait_deletes ( <tfait> ) ).
       ENDIF.
     ENDLOOP.
+
+  ENDMETHOD.
+
+
+  METHOD get_salesarea_text.
+
+    SELECT
+      SINGLE FROM zws_i_shop_sales_area_fc
+      FIELDS description
+      WHERE factorycalendar = @calendar_id
+      AND   shopsalesarea = @sales_area
+      INTO @result.
 
   ENDMETHOD.
 
