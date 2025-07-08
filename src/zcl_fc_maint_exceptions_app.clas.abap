@@ -214,6 +214,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                        enabled = client->_bind( editable )
                        text    = 'Save'(005)
                        press   = client->_event( 'BUTTON_SAVE' )
+                       icon    = 'sap-icon://save'
                        type    = 'Success' ).
 
     page->_z2ui5( )->dirty( client->_bind( dirty ) ).
