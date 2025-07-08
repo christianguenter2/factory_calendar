@@ -73,7 +73,19 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
 
       dispatch
         IMPORTING
-          i_event TYPE string.
+          i_event TYPE string,
+
+      get_text_for
+        IMPORTING
+          i_field       TYPE any
+        RETURNING
+          VALUE(result) TYPE text,
+
+      date_out
+        IMPORTING
+          i_date        TYPE datum
+        RETURNING
+          VALUE(result) TYPE string.
 
 ENDCLASS.
 
@@ -104,22 +116,24 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
   METHOD initialize.
 
+    DATA: view TYPE REF TO z2ui5_cl_xml_view.
+
     zcl_fc_maint_exceptions_model=>unlock( ).
 
     client->set_session_stateful( abap_true ).
 
-*    IF client->get( )-check_launchpad_active = abap_false.
-*    ENDIF.
+    view = COND #(
+             WHEN client->get( )-check_launchpad_active = abap_true
+             THEN z2ui5_cl_xml_view=>factory( )
+             ELSE z2ui5_cl_xml_view=>factory( )->shell( ) ).
 
     message-type = `Information`.
     message-visible = abap_false.
 
-    FINAL(page) = z2ui5_cl_xml_view=>factory(
-                                  )->shell(
-                                  )->page(
-                                     title          = `Fabrikkalender - Ausnahmen pflegen`
-                                     navbuttonpress = client->_event( 'BACK' )
-                                     shownavbutton  = xsdbool( client->get( )-s_draft-id_prev_app_stack IS NOT INITIAL ) ).
+    FINAL(page) = view->page(
+                    title          = 'Factory Calendar - Maintain Exceptions'(002)
+                    navbuttonpress = client->_event( 'BACK' )
+                    shownavbutton  = xsdbool( client->get( )-s_draft-id_prev_app_stack IS NOT INITIAL ) ).
 
     page->message_strip(
         type     = client->_bind( message-type )
@@ -132,7 +146,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                class = `sapUiContentPadding`
        )->simple_form( editable = abap_true
        )->content( `form`
-       )->label( text     = `Kalender ID`
+       )->label( text     = get_text_for( calendarid )
                  labelfor = `inputCalId`
                  required = abap_true
        )->input( id = `inputCalId`
@@ -140,7 +154,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                  maxlength = '2'
                  submit = client->_event( `GO` )
        )->text( text = client->_bind( calendarText )
-       )->label( text     = `Jahr`
+       )->label( text     = get_text_for( CONV tfain-jahr( '' ) )
                  labelfor = `inputYear`
                  required = abap_true
        )->input( id = `inputYear`
@@ -168,20 +182,20 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         )->overflow_toolbar(
         )->button(
             icon    = 'sap-icon://add'
-            text    = 'add'
+            text    = 'add'(001)
             press   = client->_event( 'BUTTON_ADD' )
             enabled = client->_bind( editable )
         )->button(
             icon  = 'sap-icon://delete'
-            text  = 'delete'
+            text  = 'delete'(003)
             press = client->_event( 'BUTTON_DELETE' )
             enabled = client->_bind( editable ) ).
 
     table->columns(
-        )->column( )->text( `Gültig von` )->get_parent(
-        )->column( )->text( `Gültig bis` )->get_parent(
-        )->column( )->text( `Arbeitstag` )->get_parent(
-        )->column( )->text( `Text` ).
+        )->column( )->text( get_text_for( CONV tfain-von( ' ' ) ) )->get_parent(
+        )->column( )->text( get_text_for( CONV tfain-bis( ' ' ) ) )->get_parent(
+        )->column( )->text( get_text_for( CONV tfain-wert( ' ' ) ) )->get_parent(
+        )->column( )->text( get_text_for( CONV tfait-ltext( ' ' ) ) ).
 
     table->items( )->column_list_item( selected = `{SELKZ}`
         )->cells(
@@ -192,13 +206,13 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
     page->footer( )->overflow_toolbar(
                    )->button(
-                       text    = 'Edit'
+                       text    = 'Edit'(004)
                        press   = client->_event( 'BUTTON_EDIT' )
                        icon    = 'sap-icon://edit'
                    )->toolbar_spacer(
                    )->button(
                        enabled = client->_bind( editable )
-                       text    = 'Save'
+                       text    = 'Save'(005)
                        press   = client->_event( 'BUTTON_SAVE' )
                        type    = 'Success' ).
 
@@ -214,7 +228,10 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
     CLEAR:
       message-text,
       message-visible,
-      header_valid.
+      header_valid,
+      dirty,
+      exceptions,
+      calendartext.
 
     calendarId = to_upper( calendarId ).
 
@@ -231,8 +248,8 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
           header_valid = abap_true.
           exceptions = retrieve_exceptions( ).
 
-          placeholder_von = |01.01.{ year }|.
-          placeholder_bis = |31.01.{ year }|.
+          placeholder_von = |{ date_out( |{ year }0101| ) }|.
+          placeholder_bis = |{ date_out( |{ year }0131| ) }|.
         ENDIF.
 
       CATCH zcx_fc_error INTO FINAL(error).
@@ -277,7 +294,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
     message-visible = abap_true.
     message-type = `Success`.
-    message-text = `Änderungen gespeichert`.
+    message-text = 'Data saved'(008).
 
   ENDMETHOD.
 
@@ -299,6 +316,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         IF editable = abap_true.
           zcl_fc_maint_exceptions_model=>unlock( ).
           editable = abap_false.
+          go( ).
         ELSE.
           zcl_fc_maint_exceptions_model=>lock( ).
           editable = abap_true.
@@ -362,8 +380,9 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
       r_continue = abap_false.
       save_event = i_event.
       client->nav_app_call( z2ui5_cl_pop_to_confirm=>factory(
-                                i_question_text = 'Unsaved data will be lost. Continue?'
-                                i_title         = 'Unsaved data' ) ).
+                                i_icon          = 'sap-icon://warning'
+                                i_question_text = |{ 'Unsaved data will be lost. Continue?'(006) }|
+                                i_title         = |{ 'Unsaved data'(007) }| ) ).
     ENDIF.
 
   ENDMETHOD.
@@ -377,8 +396,9 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
         IF confirm_result = abap_true.
           dispatch( save_event ).
-          CLEAR: save_event.
         ENDIF.
+
+        CLEAR: save_event.
 
       CATCH cx_root.
     ENDTRY.
@@ -413,6 +433,41 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
       WHEN 'BUTTON_SAVE'.
         save( ).
     ENDCASE.
+  ENDMETHOD.
+
+
+  METHOD get_text_for.
+
+    DATA:
+      data_element         TYPE rollname,
+      data_element_details TYPE rsddtel.
+
+
+    data_element = cl_abap_datadescr=>describe_by_data( i_field )->get_relative_name( ).
+
+    CALL FUNCTION 'RSD_DTEL_GET'
+      EXPORTING
+        i_dtelnm       = data_element
+      IMPORTING
+        e_s_dtel       = data_element_details
+      EXCEPTIONS
+        dtel_not_found = 1
+        doma_not_found = 2
+        illegal_input  = 3
+        OTHERS         = 4.
+    IF sy-subrc = 0.
+      result = data_element_details-txtmd.
+    ELSE.
+      result = data_element.
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD date_out.
+
+    result = |{ i_date DATE = USER }|.
+
   ENDMETHOD.
 
 ENDCLASS.
