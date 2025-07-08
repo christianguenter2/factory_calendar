@@ -259,6 +259,13 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         message-text = error->get_text( ).
     ENDTRY.
 
+    IF calendarid IS INITIAL
+    OR year IS INITIAL.
+      message-visible = abap_true.
+      message-type = `Error`.
+      message-text = 'Please enter mandatory fields'(009).
+    ENDIF.
+
   ENDMETHOD.
 
 

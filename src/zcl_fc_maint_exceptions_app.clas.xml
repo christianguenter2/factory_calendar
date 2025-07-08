@@ -60,6 +60,12 @@
      <ENTRY>Data saved</ENTRY>
      <LENGTH>44</LENGTH>
     </item>
+    <item>
+     <ID>I</ID>
+     <KEY>009</KEY>
+     <ENTRY>Please enter mandatory fields</ENTRY>
+     <LENGTH>58</LENGTH>
+    </item>
    </TPOOL>
    <I18N_TPOOL>
     <item>
@@ -112,6 +118,12 @@
        <KEY>008</KEY>
        <ENTRY>Änderungen wurden gesichert</ENTRY>
        <LENGTH>44</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>009</KEY>
+       <ENTRY>Bitte Pflichtfelder befüllen</ENTRY>
+       <LENGTH>58</LENGTH>
       </item>
      </TEXTPOOL>
     </item>
