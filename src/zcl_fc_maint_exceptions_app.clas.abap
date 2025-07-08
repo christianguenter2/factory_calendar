@@ -33,20 +33,47 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
       END OF message,
       calendartext      TYPE string,
       header_valid      TYPE abap_bool,
-      check_initialized TYPE abap_bool READ-ONLY.
+      check_initialized TYPE abap_bool READ-ONLY,
+
+      dirty             TYPE abap_bool.
 
   PRIVATE SECTION.
     DATA client TYPE REF TO z2ui5_if_client.
+    DATA save_event TYPE string.
 
-    METHODS initialize.
-    METHODS go.
-    METHODS save.
-    METHODS date_in
-      IMPORTING
-        i_date        TYPE string
-      RETURNING
-        VALUE(result) TYPE datum.
-    METHODS edit.
+    METHODS:
+      initialize,
+
+      go,
+
+      save,
+
+      date_in
+
+        IMPORTING
+          i_date        TYPE string
+        RETURNING
+          VALUE(result) TYPE datum,
+
+      edit,
+
+      detect_changes,
+
+      retrieve_exceptions
+        RETURNING
+          VALUE(result) LIKE exceptions,
+
+      confirm_dataloss_if_dirty
+        IMPORTING
+          i_event           TYPE csequence
+        RETURNING
+          VALUE(r_continue) TYPE abap_bool,
+
+      ui5_callback,
+
+      dispatch
+        IMPORTING
+          i_event TYPE string.
 
 ENDCLASS.
 
@@ -58,26 +85,17 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
     me->client = client.
 
+    IF client->get( )-check_on_navigated = abap_true.
+      ui5_callback( ).
+    ENDIF.
+
     IF check_initialized = abap_false.
       check_initialized = abap_true.
       initialize( ).
     ENDIF.
 
-    CASE client->get( )-event.
-      WHEN 'BACK'.
-        client->set_session_stateful( abap_false ).
-        client->nav_app_leave( ).
-      WHEN 'GO'.
-        go( ).
-      WHEN 'BUTTON_DELETE'.
-        DELETE exceptions WHERE selkz = abap_true.
-      WHEN 'BUTTON_ADD'.
-        INSERT INITIAL LINE INTO TABLE exceptions.
-      WHEN 'BUTTON_EDIT'.
-        edit( ).
-      WHEN 'BUTTON_SAVE'.
-        save( ).
-    ENDCASE.
+    detect_changes( ).
+    dispatch( client->get( )-event ).
 
     client->view_model_update( ).
 
@@ -102,8 +120,6 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                                      title          = `Fabrikkalender - Ausnahmen pflegen`
                                      navbuttonpress = client->_event( 'BACK' )
                                      shownavbutton  = xsdbool( client->get( )-s_draft-id_prev_app_stack IS NOT INITIAL ) ).
-
-
 
     page->message_strip(
         type     = client->_bind( message-type )
@@ -186,6 +202,8 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                        press   = client->_event( 'BUTTON_SAVE' )
                        type    = 'Success' ).
 
+    page->_z2ui5( )->dirty( client->_bind( dirty ) ).
+
     client->view_display( page->stringify( ) ).
 
   ENDMETHOD.
@@ -211,14 +229,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         IF year IS NOT INITIAL.
           factory_calendar->validate( ).
           header_valid = abap_true.
-          exceptions = VALUE #(
-                         FOR exception IN factory_calendar->retrieve_exceptions( )
-                         (
-                           von = |{ exception-von DATE = USER }|
-                           bis = |{ exception-bis DATE = USER }|
-                           ltext = exception-ltext
-                           wert  = xsdbool( exception-wert = '1' )
-                         ) ).
+          exceptions = retrieve_exceptions( ).
 
           placeholder_von = |01.01.{ year }|.
           placeholder_bis = |31.01.{ year }|.
@@ -286,11 +297,11 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
     TRY.
         IF editable = abap_true.
-          editable = abap_false.
           zcl_fc_maint_exceptions_model=>unlock( ).
+          editable = abap_false.
         ELSE.
-          editable = abap_true.
           zcl_fc_maint_exceptions_model=>lock( ).
+          editable = abap_true.
         ENDIF.
 
       CATCH zcx_fc_error INTO FINAL(error).
@@ -299,6 +310,109 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         message-text = error->get_text( ).
     ENDTRY.
 
+  ENDMETHOD.
+
+
+  METHOD detect_changes.
+
+    IF year IS INITIAL
+    OR calendarId IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    IF exceptions <> retrieve_exceptions( ).
+      dirty = abap_true.
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD retrieve_exceptions.
+
+    IF year IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    FINAL(factory_calendar) = NEW zcl_fc_maint_exceptions_model(
+                                      i_calendar_id = calendarId
+                                      i_year        = EXACT #( year ) ).
+
+    result = VALUE #(
+               FOR exception IN factory_calendar->retrieve_exceptions( )
+               (
+                 von = |{ exception-von DATE = USER }|
+                 bis = |{ exception-bis DATE = USER }|
+                 ltext = exception-ltext
+                 wert  = xsdbool( exception-wert = '1' )
+               ) ).
+
+  ENDMETHOD.
+
+
+  METHOD confirm_dataloss_if_dirty.
+
+    r_continue = abap_true.
+
+    IF save_event IS NOT INITIAL.
+      RETURN.
+    ENDIF.
+
+    IF  dirty = abap_true
+    AND editable = abap_true.
+      r_continue = abap_false.
+      save_event = i_event.
+      client->nav_app_call( z2ui5_cl_pop_to_confirm=>factory(
+                                i_question_text = 'Unsaved data will be lost. Continue?'
+                                i_title         = 'Unsaved data' ) ).
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD ui5_callback.
+
+    TRY.
+        FINAL(prev) = client->get_app( client->get( )-s_draft-id_prev_app ).
+        FINAL(confirm_result) = CAST z2ui5_cl_pop_to_confirm( prev )->result( ).
+
+        IF confirm_result = abap_true.
+          dispatch( save_event ).
+          CLEAR: save_event.
+        ENDIF.
+
+      CATCH cx_root.
+    ENDTRY.
+
+  ENDMETHOD.
+
+
+  METHOD dispatch.
+
+    CASE i_event.
+      WHEN 'BACK'.
+        IF confirm_dataloss_if_dirty( i_event ).
+          client->set_session_stateful( abap_false ).
+          client->nav_app_leave( ).
+        ENDIF.
+      WHEN 'GO'.
+        IF confirm_dataloss_if_dirty( i_event ).
+          go( ).
+        ENDIF.
+      WHEN 'BUTTON_DELETE'.
+        DELETE exceptions WHERE selkz = abap_true.
+        IF sy-subrc = 0.
+          dirty = abap_true.
+        ENDIF.
+      WHEN 'BUTTON_ADD'.
+        INSERT INITIAL LINE INTO TABLE exceptions.
+        dirty = abap_true.
+      WHEN 'BUTTON_EDIT'.
+        IF confirm_dataloss_if_dirty( i_event ).
+          edit( ).
+        ENDIF.
+      WHEN 'BUTTON_SAVE'.
+        save( ).
+    ENDCASE.
   ENDMETHOD.
 
 ENDCLASS.
