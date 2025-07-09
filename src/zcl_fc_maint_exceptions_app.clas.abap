@@ -98,7 +98,10 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
 
       init,
 
-      scroll_to_top.
+      scroll_to_top,
+      
+      get_model
+        RETURNING value(result) TYPE REF TO zcl_fc_maint_exceptions_model.
 
 ENDCLASS.
 
@@ -548,7 +551,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
   METHOD get_model.
 
     result = NEW zcl_fc_maint_exceptions_model(
-                     i_calendar_id = calendarId
+                     i_calendar_id = calendarid
                      i_sales_area  = sales_area
                      i_year        = EXACT #( year ) ).
 
