@@ -54,9 +54,14 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
           i_exceptions TYPE tt_exception
         RAISING
           zcx_fc_error,
+          
       get_salesarea_text
         RETURNING
-          VALUE(result) TYPE string.
+          VALUE(result) TYPE string,
+
+      check_edit_allowed
+        RAISING
+          zcx_fc_error.
 
   PRIVATE SECTION.
     TYPES:
@@ -79,6 +84,7 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
         e_tfait_inserts TYPE tt_tfait
         e_tfait_updates TYPE tt_tfait
         e_tfait_deletes TYPE tt_tfait.
+
 
 ENDCLASS.
 
@@ -149,10 +155,6 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
 
   METHOD validate.
 
-    IF year < sy-datum+0(4).
-      RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e003(zfc_maint).
-    ENDIF.
-
     SELECT
       SINGLE @abap_true AS valid
       FROM tfacd
@@ -163,6 +165,8 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
     IF valid = abap_false.
       RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e002(zfc_maint) WITH calendar_id year.
     ENDIF.
+
+    FINAL(next_year) = CONV tfacs-jahr( year + 1 ).
 
     " check single exceptions
     LOOP AT i_exceptions ASSIGNING FIELD-SYMBOL(<exception>).
@@ -179,7 +183,8 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
         RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e007(zfc_maint) WITH |{ <exception>-von DATE = USER }| year.
       ENDIF.
 
-      IF <exception>-bis(4) <> year.
+      IF  <exception>-bis(4) <> year
+      AND <exception>-bis(4) <> next_year.
         RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e007(zfc_maint) WITH |{ <exception>-bis DATE = USER }| year.
       ENDIF.
 
@@ -211,6 +216,7 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
 
     existence_check( ).
     validate( i_exceptions ).
+    check_edit_allowed( ).
 
     prepare_db_operations(
       EXPORTING
@@ -379,6 +385,14 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
       WHERE factorycalendar = @calendar_id
       AND   shopsalesarea = @sales_area
       INTO @result.
+
+  ENDMETHOD.
+
+  METHOD check_edit_allowed.
+
+    IF year < sy-datum+0(4).
+      RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e003(zfc_maint).
+    ENDIF.
 
   ENDMETHOD.
 
