@@ -24,7 +24,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZFC_MAINT</ARBGB>
      <MSGNR>003</MSGNR>
-     <TEXT>Year must be current or future</TEXT>
+     <TEXT>Change not possible for past yearst</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -48,7 +48,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZFC_MAINT</ARBGB>
      <MSGNR>007</MSGNR>
-     <TEXT>Date &amp;1 is not in year &amp;2</TEXT>
+     <TEXT>Date &amp;1 is no possible for year &amp;2</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -93,7 +93,7 @@
     <item>
      <SPRSL>D</SPRSL>
      <MSGNR>003</MSGNR>
-     <TEXT>Jahr muss entweder aktuell sein oder in der Zukunft liegen</TEXT>
+     <TEXT>Änderung für vergangene Jahre nicht möglich</TEXT>
     </item>
     <item>
      <SPRSL>D</SPRSL>
@@ -113,7 +113,7 @@
     <item>
      <SPRSL>D</SPRSL>
      <MSGNR>007</MSGNR>
-     <TEXT>Das Datum &amp;1 liegt nicht im Jahr &amp;2</TEXT>
+     <TEXT>Das Datum &amp;1 kann nicht für das Jahr &amp;2 gepflegt werden</TEXT>
     </item>
     <item>
      <SPRSL>D</SPRSL>

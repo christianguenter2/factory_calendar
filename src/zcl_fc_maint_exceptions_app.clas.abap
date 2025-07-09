@@ -34,7 +34,6 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
       calendartext      TYPE string,
       header_valid      TYPE abap_bool,
       check_initialized TYPE abap_bool READ-ONLY,
-
       dirty             TYPE abap_bool.
 
   PRIVATE SECTION.
@@ -42,7 +41,7 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
     DATA save_event TYPE string.
 
     METHODS:
-      initialize,
+      render,
 
       go,
 
@@ -85,7 +84,12 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
         IMPORTING
           i_date        TYPE datum
         RETURNING
-          VALUE(result) TYPE string.
+          VALUE(result) TYPE string,
+
+      get_model
+        RETURNING
+          VALUE(result) TYPE REF TO zcl_fc_maint_exceptions_model,
+      init.
 
 ENDCLASS.
 
@@ -103,7 +107,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
     IF check_initialized = abap_false.
       check_initialized = abap_true.
-      initialize( ).
+      render( ).
     ENDIF.
 
     detect_changes( ).
@@ -114,7 +118,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD initialize.
+  METHOD render.
 
     DATA: view TYPE REF TO z2ui5_cl_xml_view.
 
@@ -133,6 +137,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
     FINAL(page) = view->page(
                     title          = 'Factory Calendar - Maintain Exceptions'(002)
                     navbuttonpress = client->_event( 'BACK' )
+                    class          = `sapUiContentPadding`
                     shownavbutton  = xsdbool( client->get( )-s_draft-id_prev_app_stack IS NOT INITIAL ) ).
 
     page->message_strip(
@@ -140,10 +145,10 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         text     = client->_bind( message-text )
         visible  = client->_bind( message-visible )
         showicon = abap_true
+        class    = `sapUiSmallMarginBottom`
     ).
 
     page->horizontal_layout(
-               class = `sapUiContentPadding`
        )->simple_form( editable = abap_true
        )->content( `form`
        )->label( text     = get_text_for( calendarid )
@@ -172,10 +177,9 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
        ).
 
     FINAL(table) = page->horizontal_layout(
-                        class = `sapUiContentPadding`
                       )->table(
-                        items = client->_bind_edit( exceptions )
-                        mode  = 'MultiSelect'
+                        items   = client->_bind_edit( exceptions )
+                        mode    = 'MultiSelect'
                         visible = client->_bind( header_valid ) ).
 
     table->header_toolbar(
@@ -186,9 +190,9 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
             press   = client->_event( 'BUTTON_ADD' )
             enabled = client->_bind( editable )
         )->button(
-            icon  = 'sap-icon://delete'
-            text  = 'delete'(003)
-            press = client->_event( 'BUTTON_DELETE' )
+            icon    = 'sap-icon://delete'
+            text    = 'delete'(003)
+            press   = client->_event( 'BUTTON_DELETE' )
             enabled = client->_bind( editable ) ).
 
     table->columns(
@@ -209,6 +213,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                        text    = 'Edit'(004)
                        press   = client->_event( 'BUTTON_EDIT' )
                        icon    = 'sap-icon://edit'
+                       enabled = client->_bind( header_valid )
                    )->toolbar_spacer(
                    )->button(
                        enabled = client->_bind( editable )
@@ -226,19 +231,11 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
   METHOD go.
 
-    CLEAR:
-      message-text,
-      message-visible,
-      header_valid,
-      dirty,
-      exceptions,
-      calendartext.
+    init( ).
 
     calendarId = to_upper( calendarId ).
 
-    FINAL(factory_calendar) = NEW zcl_fc_maint_exceptions_model(
-                                      i_calendar_id = calendarId
-                                      i_year        = EXACT #( year ) ).
+    FINAL(factory_calendar) = get_model( ).
 
     TRY.
         factory_calendar->existence_check( ).
@@ -275,9 +272,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
       message-text,
       message-visible.
 
-    FINAL(factory_calendar) = NEW zcl_fc_maint_exceptions_model(
-                                      i_calendar_id = calendarId
-                                      i_year        = EXACT #( year ) ).
+    FINAL(factory_calendar) = get_model( ).
 
     TRY.
         factory_calendar->validate( ).
@@ -321,13 +316,21 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
   METHOD edit.
 
     TRY.
+        FINAL(factory_calendar) = get_model( ).
+
         IF editable = abap_true.
-          zcl_fc_maint_exceptions_model=>unlock( ).
-          editable = abap_false.
+
+          factory_calendar->unlock( ).
           go( ).
+          editable = abap_false.
+
         ELSE.
-          zcl_fc_maint_exceptions_model=>lock( ).
+
+          factory_calendar->existence_check( ).
+          factory_calendar->check_edit_allowed( ).
+          factory_calendar->lock( ).
           editable = abap_true.
+
         ENDIF.
 
       CATCH zcx_fc_error INTO FINAL(error).
@@ -359,12 +362,8 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    FINAL(factory_calendar) = NEW zcl_fc_maint_exceptions_model(
-                                      i_calendar_id = calendarId
-                                      i_year        = EXACT #( year ) ).
-
     result = VALUE #(
-               FOR exception IN factory_calendar->retrieve_exceptions( )
+               FOR exception IN get_model( )->retrieve_exceptions( )
                (
                  von = |{ exception-von DATE = USER }|
                  bis = |{ exception-bis DATE = USER }|
@@ -427,11 +426,13 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
           go( ).
         ENDIF.
       WHEN 'BUTTON_DELETE'.
+        ASSERT editable = abap_true.
         DELETE exceptions WHERE selkz = abap_true.
         IF sy-subrc = 0.
           dirty = abap_true.
         ENDIF.
       WHEN 'BUTTON_ADD'.
+        ASSERT editable = abap_true.
         INSERT INITIAL LINE INTO TABLE exceptions.
         dirty = abap_true.
       WHEN 'BUTTON_EDIT'.
@@ -439,6 +440,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
           edit( ).
         ENDIF.
       WHEN 'BUTTON_SAVE'.
+        ASSERT editable = abap_true.
         save( ).
     ENDCASE.
   ENDMETHOD.
@@ -475,6 +477,29 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
   METHOD date_out.
 
     result = |{ i_date DATE = USER }|.
+
+  ENDMETHOD.
+
+
+  METHOD get_model.
+
+    result = NEW zcl_fc_maint_exceptions_model(
+                     i_calendar_id = calendarId
+                     i_year        = EXACT #( year ) ).
+
+  ENDMETHOD.
+
+
+  METHOD init.
+
+    CLEAR:
+      message-text,
+      message-visible,
+      header_valid,
+      dirty,
+      exceptions,
+      calendartext,
+      editable.
 
   ENDMETHOD.
 
