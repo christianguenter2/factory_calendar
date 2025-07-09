@@ -68,9 +68,7 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
 
       retrieve_exceptions
         RETURNING
-          VALUE(result) LIKE exceptions
-        RAISING
-          zcx_fc_error,
+          VALUE(result) LIKE exceptions,
 
       confirm_dataloss_if_dirty
         IMPORTING
@@ -103,7 +101,11 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
       scroll_to_top,
 
       get_model
-        RETURNING VALUE(result) TYPE REF TO zcl_fc_maint_exceptions_model.
+        RETURNING VALUE(result) TYPE REF TO zcl_fc_maint_exceptions_model,
+
+      handle_error
+        IMPORTING
+          i_error TYPE REF TO cx_root.
 
 ENDCLASS.
 
@@ -272,6 +274,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
     TRY.
         factory_calendar->existence_check( ).
+        factory_calendar->check_display_allowed( ).
         calendartext = factory_calendar->get_description( ).
         salesarea_text = factory_calendar->get_salesarea_text( ).
 
@@ -285,9 +288,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         ENDIF.
 
       CATCH zcx_fc_error INTO FINAL(error).
-        message-visible = abap_true.
-        message-type = `Error`.
-        message-text = error->get_text( ).
+        handle_error( error ).
     ENDTRY.
 
     IF i_check_mandatory_fields = abap_true.
@@ -371,9 +372,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         ENDIF.
 
       CATCH zcx_fc_error INTO FINAL(error).
-        message-visible = abap_true.
-        message-type = `Error`.
-        message-text = error->get_text( ).
+        handle_error( error ).
     ENDTRY.
 
   ENDMETHOD.
@@ -382,11 +381,11 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
   METHOD detect_changes.
 
     IF year IS INITIAL
-    OR calendarid IS INITIAL.
+    OR header_valid = abap_false.
       RETURN.
     ENDIF.
 
-    IF exceptions <> retrieve_exceptions( ).
+    IF retrieve_exceptions( ) <> exceptions .
       dirty = abap_true.
     ENDIF.
 
@@ -554,6 +553,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
   ENDMETHOD.
 
+
   METHOD get_model.
 
     result = NEW zcl_fc_maint_exceptions_model(
@@ -584,6 +584,13 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
     scroll_values = VALUE #( ( n = `page` v = '0' ) ).
     scrollupdate = abap_true.
 
+  ENDMETHOD.
+
+
+  METHOD handle_error.
+    message-visible = abap_true.
+    message-type    = `Error`.
+    message-text    = i_error->get_text( ).
   ENDMETHOD.
 
 ENDCLASS.

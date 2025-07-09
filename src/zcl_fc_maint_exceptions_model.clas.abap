@@ -47,9 +47,7 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
 
       retrieve_exceptions
         RETURNING
-          VALUE(result) TYPE tt_exception
-        RAISING
-          zcx_fc_error,
+          VALUE(result) TYPE tt_exception,
 
       save_exceptions
         IMPORTING
@@ -62,6 +60,9 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
           VALUE(result) TYPE string,
 
       check_edit_allowed
+        RAISING
+          zcx_fc_error,
+      check_display_allowed
         RAISING
           zcx_fc_error.
 
@@ -136,14 +137,6 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
 
 
   METHOD retrieve_exceptions.
-
-    AUTHORITY-CHECK
-      OBJECT 'ZFC_MAINT'
-      ID 'ZFC_IDENT' FIELD calendar_id
-      ID 'ACTVT' FIELD '02'.
-    IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e012(zfc_maint) WITH calendar_id.
-    ENDIF.
 
     SELECT
       FROM tfain
@@ -412,6 +405,19 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e011(zfc_maint) WITH calendar_id.
     ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD check_display_allowed.
+
+*    AUTHORITY-CHECK
+*      OBJECT 'ZFC_MAINT'
+*      ID 'ZFC_IDENT' FIELD calendar_id
+*      ID 'ACTVT' FIELD '02'.
+*    IF sy-subrc <> 0.
+*      RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e012(zfc_maint) WITH calendar_id.
+*    ENDIF.
 
   ENDMETHOD.
 
