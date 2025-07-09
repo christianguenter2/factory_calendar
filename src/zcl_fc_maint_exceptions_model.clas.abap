@@ -54,7 +54,7 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
           i_exceptions TYPE tt_exception
         RAISING
           zcx_fc_error,
-          
+
       get_salesarea_text
         RETURNING
           VALUE(result) TYPE string,

@@ -99,7 +99,7 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
       init,
 
       scroll_to_top,
-      
+
       get_model
         RETURNING value(result) TYPE REF TO zcl_fc_maint_exceptions_model.
 
