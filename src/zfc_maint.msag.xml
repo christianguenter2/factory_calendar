@@ -68,6 +68,18 @@
      <MSGNR>010</MSGNR>
      <TEXT>Calendar-Id &amp;1 and sales area &amp;2 are not matching</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZFC_MAINT</ARBGB>
+     <MSGNR>011</MSGNR>
+     <TEXT>You are not authorized to maintain calendar &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZFC_MAINT</ARBGB>
+     <MSGNR>012</MSGNR>
+     <TEXT>You are not authorized to display calendar &amp;1</TEXT>
+    </T100>
    </T100>
    <I18N_LANGS>
     <LANGU>D</LANGU>
@@ -129,6 +141,16 @@
      <SPRSL>D</SPRSL>
      <MSGNR>010</MSGNR>
      <TEXT>Kalender-Id &amp;1 und Anbieter &amp;2 passen nicht zusammen</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>011</MSGNR>
+     <TEXT>Sie sind nicht zum Pflegen des Kalenders &amp;1 berechtigt</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>012</MSGNR>
+     <TEXT>Sie sind nicht zum Anzeign des Kalenders &amp;1 berechtigt</TEXT>
     </item>
    </T100_TEXTS>
   </asx:values>

@@ -68,7 +68,9 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
 
       retrieve_exceptions
         RETURNING
-          VALUE(result) LIKE exceptions,
+          VALUE(result) LIKE exceptions
+        RAISING
+          zcx_fc_error,
 
       confirm_dataloss_if_dirty
         IMPORTING
@@ -101,7 +103,7 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
       scroll_to_top,
 
       get_model
-        RETURNING value(result) TYPE REF TO zcl_fc_maint_exceptions_model.
+        RETURNING VALUE(result) TYPE REF TO zcl_fc_maint_exceptions_model.
 
 ENDCLASS.
 
@@ -207,10 +209,16 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                       )->table(
                         items   = client->_bind_edit( exceptions )
                         mode    = 'MultiSelect'
+                        class   = `sapUiSmallMarginTop`
                         visible = client->_bind( header_valid ) ).
 
     table->header_toolbar(
         )->overflow_toolbar(
+        )->button(
+            text    = 'Edit'(004)
+            press   = client->_event( 'BUTTON_EDIT' )
+            icon    = 'sap-icon://edit'
+            enabled = client->_bind( header_valid )
         )->button(
             icon    = 'sap-icon://add'
             text    = 'add'(001)
@@ -236,11 +244,6 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
             )->input(  editable = client->_bind( editable ) value = `{LTEXT}` ).
 
     page->footer( )->overflow_toolbar(
-                   )->button(
-                       text    = 'Edit'(004)
-                       press   = client->_event( 'BUTTON_EDIT' )
-                       icon    = 'sap-icon://edit'
-                       enabled = client->_bind( header_valid )
                    )->toolbar_spacer(
                    )->button(
                        enabled = client->_bind( editable )
@@ -436,12 +439,15 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
 
         IF f4_active = abap_true.
 
-          FINAL(f4_app) = CAST z2ui5_cl_tool_app_shlp_gen( prev ).
-          sales_area = f4_app->mv_shlp_result.
-          calendarid = f4_app->mv_shlp_result2.
           CLEAR: f4_active.
 
-          go( i_check_mandatory_fields = abap_false ).
+          FINAL(f4_app) = CAST z2ui5_cl_tool_app_shlp_gen( prev ).
+
+          IF f4_app->mv_shlp_result IS NOT INITIAL.
+            sales_area = f4_app->mv_shlp_result.
+            calendarid = f4_app->mv_shlp_result2.
+            go( i_check_mandatory_fields = abap_false ).
+          ENDIF.
 
         ENDIF.
 

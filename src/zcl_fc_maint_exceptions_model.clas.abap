@@ -47,7 +47,9 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
 
       retrieve_exceptions
         RETURNING
-          VALUE(result) TYPE tt_exception,
+          VALUE(result) TYPE tt_exception
+        RAISING
+          zcx_fc_error,
 
       save_exceptions
         IMPORTING
@@ -110,7 +112,7 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
     ENDTRY.
 
     SELECT
-      SINGLE FROM zws_i_shop_sales_area_fc
+      SINGLE FROM zws_i_shop_factory_calendar
       FIELDS @abap_true AS exists
       WHERE factorycalendar = @calendar_id
       AND   shopsalesarea = @sales_area
@@ -134,6 +136,14 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
 
 
   METHOD retrieve_exceptions.
+
+    AUTHORITY-CHECK
+      OBJECT 'ZFC_MAINT'
+      ID 'ZFC_IDENT' FIELD calendar_id
+      ID 'ACTVT' FIELD '02'.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e012(zfc_maint) WITH calendar_id.
+    ENDIF.
 
     SELECT
       FROM tfain
@@ -380,7 +390,7 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
   METHOD get_salesarea_text.
 
     SELECT
-      SINGLE FROM zws_i_shop_sales_area_fc
+      SINGLE FROM zws_i_shop_factory_calendar
       FIELDS description
       WHERE factorycalendar = @calendar_id
       AND   shopsalesarea = @sales_area
@@ -388,10 +398,19 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
 
   ENDMETHOD.
 
+
   METHOD check_edit_allowed.
 
     IF year < sy-datum+0(4).
       RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e003(zfc_maint).
+    ENDIF.
+
+    AUTHORITY-CHECK
+      OBJECT 'ZFC_MAINT'
+      ID 'ZFC_IDENT' FIELD calendar_id
+      ID 'ACTVT' FIELD '02'.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e011(zfc_maint) WITH calendar_id.
     ENDIF.
 
   ENDMETHOD.
