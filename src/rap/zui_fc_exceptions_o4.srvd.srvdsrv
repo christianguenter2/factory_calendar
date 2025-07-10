@@ -1,0 +1,4 @@
+@EndUserText.label: 'Service definition for ZC_FC_EXCEPTIONS'
+define service ZUI_FC_EXCEPTIONS_O4 {
+  expose ZC_FC_EXCEPTIONS;
+}

@@ -1,0 +1,54 @@
+managed implementation in class ZBP_FC_EXCEPTIONS unique;
+strict ( 2 );
+with draft;
+
+define behavior for ZR_FC_EXCEPTIONS
+persistent table zfc_exceptions
+draft table ZFC_EXCEPTIONS_D
+etag master LocalLastChangedAt
+lock master total etag LastChangedAt
+authorization master( global )
+
+{
+  field ( mandatory : create )
+   Ident,
+   Jahr,
+   Von;
+
+  field ( readonly )
+   LocalCreatedAt,
+   LocalCreatedBy,
+   LastChangedAt,
+   LocalLastChangedAt,
+   LocalLastChangedBy;
+
+  field ( readonly : update )
+   Ident,
+   Jahr,
+   Von;
+
+
+  create;
+  update;
+  delete;
+
+  draft action Edit;
+  draft action Activate optimized;
+  draft action Discard;
+  draft action Resume;
+  draft determine action Prepare;
+
+  mapping for ZFC_EXCEPTIONS
+  {
+    Ident = ident;
+    Jahr = jahr;
+    Von = von;
+    Bis = bis;
+    Text = ltext;
+    LocalCreatedBy = local_created_by;
+    LocalCreatedAt = local_created_at;
+    LocalLastChangedBy = local_last_changed_by;
+    LocalLastChangedAt = local_last_changed_at;
+    LastChangedAt = last_changed_at;
+  }
+}
