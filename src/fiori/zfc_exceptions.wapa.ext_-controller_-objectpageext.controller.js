@@ -1,0 +1,3 @@
+sap.ui.define(["sap/ui/core/mvc/ControllerExtension"],function(e){"use strict";const t=e.extend("webapp.ext.controller.ObjectPageExt",{override:{onInit(){const e=this.base.getExtensionAPI().getModel();console.log("Test")},onAfterRendering(){const e=this.+
+base.getExtensionAPI().byId("factorycalendarexception::ZC_FC_EXCEPTIONSObjectPage--fe::CustomAction::BACK");if(e&&sap.ushell.Container){e.setVisible(false)}}}});return t});                                                                                   
+//# sourceMappingURL=ObjectPageExt.controller.js.map                                                                                                                                                                                                           

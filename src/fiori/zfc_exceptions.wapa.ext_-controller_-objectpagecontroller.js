@@ -1,0 +1,2 @@
+sap.ui.define([],function(){"use strict";var n={onBack:function(n){window.history.back()}};return n});                                                                                                                                                         
+//# sourceMappingURL=ObjectPageController.js.map                                                                                                                                                                                                               
