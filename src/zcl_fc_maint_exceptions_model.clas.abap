@@ -277,6 +277,14 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
 
     COMMIT WORK.
 
+    " Kalenderpuffer synchronisieren
+    " https://abapforum.com/forum/viewtopic.php?t=22474
+*    SUBMIT rsscalt2 AND RETURN.
+
+*    CALL FUNCTION 'TSTR_INVALIDATE_CALID'
+*      EXPORTING
+*        if_calid = calendar_id.
+
   ENDMETHOD.
 
 
@@ -398,13 +406,13 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e003(zfc_maint).
     ENDIF.
 
-    AUTHORITY-CHECK
-      OBJECT 'ZFC_MAINT'
-      ID 'ZFC_IDENT' FIELD calendar_id
-      ID 'ACTVT' FIELD '02'.
-    IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e011(zfc_maint) WITH calendar_id.
-    ENDIF.
+*    AUTHORITY-CHECK
+*      OBJECT 'ZFC_MAINT'
+*      ID 'ZFC_IDENT' FIELD calendar_id
+*      ID 'ACTVT' FIELD '02'.
+*    IF sy-subrc <> 0.
+*      RAISE EXCEPTION TYPE zcx_fc_error MESSAGE e011(zfc_maint) WITH calendar_id.
+*    ENDIF.
 
   ENDMETHOD.
 

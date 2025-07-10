@@ -33,7 +33,7 @@ authorization master( global )
   delete;
 
   draft action Edit;
-  draft action Activate optimized;
+  draft action Activate;
   draft action Discard;
   draft action Resume;
   draft determine action Prepare;

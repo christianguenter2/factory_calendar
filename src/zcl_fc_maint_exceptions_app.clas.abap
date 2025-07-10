@@ -243,7 +243,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
             )->date_picker( editable = client->_bind( editable ) value = `{VON}` placeholder = client->_bind( placeholder_von ) required = abap_true
             )->date_picker( editable = client->_bind( editable ) value = `{BIS}` placeholder = client->_bind( placeholder_bis ) required = abap_true
             )->checkbox( editable = client->_bind( editable ) selected = `{WERT}`
-            )->input(  editable = client->_bind( editable ) value = `{LTEXT}` ).
+            )->input( change = client->_event( 'TABLE_CHANGED' ) editable = client->_bind( editable ) value = `{LTEXT}` ).
 
     page->footer( )->overflow_toolbar(
                    )->toolbar_spacer(
@@ -322,6 +322,8 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                      wert  = SWITCH #( exception-wert
                                WHEN abap_true  THEN '1'
                                WHEN abap_false THEN '0' ) ) ) ).
+
+        dirty = abap_false.
 
       CATCH zcx_fc_error INTO FINAL(error).
         message-visible = abap_true.
@@ -500,6 +502,8 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         IF confirm_dataloss_if_dirty( i_event ).
           on_f4( ).
         ENDIF.
+      WHEN 'TABLE_CHANGED'.
+        dirty = abap_true.
     ENDCASE.
 
   ENDMETHOD.
