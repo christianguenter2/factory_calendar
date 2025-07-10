@@ -1,0 +1,81 @@
+@Metadata.layer: #CORE
+@UI: {
+  headerInfo: {
+    typeName: 'Sperrtage',
+    typeNamePlural: 'Sperrtage'
+  }
+}
+annotate view ZC_FC_EXCEPTIONS with
+{
+  @UI.facet: [ {
+    id: 'idIdentification',
+    type: #IDENTIFICATION_REFERENCE,
+    label: 'Sperrtage',
+    position: 10
+  } ]
+  @UI.lineItem: [ {
+    position: 10 ,
+    importance: #MEDIUM,
+    label: ''
+  } ]
+  @UI.identification: [ {
+    position: 10 ,
+    label: ''
+  } ]
+  @UI.selectionField: [ {
+    position: 10
+  } ]
+  @Consumption.filter: { mandatory: true , selectionType: #SINGLE, multipleSelections: false }
+  Ident;
+
+  @UI.lineItem: [ {
+    position: 20 ,
+    importance: #MEDIUM,
+    label: 'Jahr'
+  } ]
+  @UI.identification: [ {
+    position: 20 ,
+    label: 'Jahr'
+  } ]
+  @UI.selectionField: [ {
+    position: 20
+  } ]
+  @Consumption.filter: { mandatory: true , selectionType: #SINGLE, multipleSelections: false }
+  Jahr;
+
+  @UI.lineItem: [ {
+    position: 30 ,
+    importance: #MEDIUM,
+    label: ''
+  } ]
+  @UI.identification: [ {
+    position: 30 ,
+    label: ''
+  } ]
+  Von;
+
+  @UI.lineItem: [ {
+    position: 40 ,
+    importance: #MEDIUM,
+    label: ''
+  } ]
+  @UI.identification: [ {
+    position: 40 ,
+    label: ''
+  } ]
+  Bis;
+
+  @UI.lineItem: [ {
+    position: 60 ,
+    importance: #MEDIUM,
+    label: ''
+  } ]
+  @UI.identification: [ {
+    position: 60 ,
+    label: ''
+  } ]
+  Text;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}
