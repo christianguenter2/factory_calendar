@@ -4,39 +4,39 @@ with draft;
 
 define behavior for ZR_FC_EXCEPTIONS
 persistent table zfc_exceptions
-draft table ZFC_EXCEPTIONS_D
+draft table zfc_exceptions_d
 etag master LocalLastChangedAt
 lock master total etag LastChangedAt
-authorization master( global )
+authorization master ( instance )
 
 {
   field ( mandatory : create )
-   Ident,
-   Jahr,
-   Von;
+  Ident,
+  Von;
 
   field ( readonly )
-   LocalCreatedAt,
-   LocalCreatedBy,
-   LastChangedAt,
-   LocalLastChangedAt,
-   LocalLastChangedBy;
+  LocalCreatedAt,
+  LocalCreatedBy,
+  LastChangedAt,
+  LocalLastChangedAt,
+  LocalLastChangedBy;
 
   field ( readonly : update )
-   Ident,
-   Jahr,
-   Von;
+  Ident,
+  Jahr,
+  Von;
 
-
-  create;
-  update;
-  delete;
+  create ( precheck );
+  update ( precheck );
+  delete ( precheck );
 
   draft action Edit;
   draft action Activate;
   draft action Discard;
   draft action Resume;
-  draft determine action Prepare;
+  draft determine action Prepare { validation overlapping_intervals; }
+
+  validation overlapping_intervals on save { create; update; }
 
   mapping for ZFC_EXCEPTIONS
   {

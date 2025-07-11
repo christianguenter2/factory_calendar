@@ -1,0 +1,12 @@
+@EndUserText.label: 'Fabrikkalender'
+@MappingRole: true
+define role ZR_FC_EXCEPTIONS_AC {
+    grant
+        select
+            on
+                ZR_FC_EXCEPTIONS;
+//                     where
+//                        (Ident) = aspect pfcg_auth(ZFC_MAINT, ZFC_IDENT, ACTVT = '03');
+ 
+                        
+}

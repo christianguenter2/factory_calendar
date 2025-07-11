@@ -1,0 +1,11 @@
+@EndUserText.label: 'Fabrikkalender'
+@MappingRole: true
+define role ZC_FC_EXCEPTIONS_AC {
+    grant
+        select
+            on
+              ZC_FC_EXCEPTIONS
+                where 
+                   inheriting conditions from entity ZR_FC_EXCEPTIONS; 
+ 
+}

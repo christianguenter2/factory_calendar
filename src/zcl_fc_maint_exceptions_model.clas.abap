@@ -6,13 +6,11 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
   PUBLIC SECTION.
     TYPES:
       BEGIN OF t_exception,
-        ident TYPE tfain-ident,
-        jahr  TYPE tfain-jahr,
-        von   TYPE tfain-von,
-        bis   TYPE tfain-bis,
-        wert  TYPE tfain-wert,
-        spra  TYPE tfait-spra,
-        ltext TYPE tfait-ltext,
+        ident TYPE zc_fc_exceptions-ident,
+        jahr  TYPE zc_fc_exceptions-jahr,
+        von   TYPE zc_fc_exceptions-von,
+        bis   TYPE zc_fc_exceptions-bis,
+        text  TYPE zc_fc_exceptions-text,
       END OF t_exception,
       tt_exception TYPE STANDARD TABLE OF t_exception
                         WITH NON-UNIQUE DEFAULT KEY.
@@ -62,6 +60,7 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
       check_edit_allowed
         RAISING
           zcx_fc_error,
+
       check_display_allowed
         RAISING
           zcx_fc_error.
@@ -87,7 +86,6 @@ CLASS zcl_fc_maint_exceptions_model DEFINITION
         e_tfait_inserts TYPE tt_tfait
         e_tfait_updates TYPE tt_tfait
         e_tfait_deletes TYPE tt_tfait.
-
 
 ENDCLASS.
 
@@ -139,19 +137,27 @@ CLASS zcl_fc_maint_exceptions_model IMPLEMENTATION.
   METHOD retrieve_exceptions.
 
     SELECT
-      FROM tfain
-      LEFT OUTER JOIN tfait ON tfain~ident = tfait~ident
-                            AND tfain~jahr = tfait~jahr
-                            AND tfain~von  = tfait~von
-                            AND tfait~spra = @sy-langu
-      FIELDS tfain~*, tfait~spra, tfait~ltext
-      WHERE tfain~ident = @calendar_id
-      AND   tfain~jahr  = @year
-      ORDER BY
-        tfain~ident,
-        tfain~jahr,
-        tfain~von
+      FROM zc_fc_exceptions
+      FIELDS *
+      WHERE ident = @calendar_id
+      AND   jahr  = @year
+      ORDER BY PRIMARY KEY
       INTO CORRESPONDING FIELDS OF TABLE @result.
+
+*    SELECT
+*      FROM tfain
+*      LEFT OUTER JOIN tfait ON tfain~ident = tfait~ident
+*                            AND tfain~jahr = tfait~jahr
+*                            AND tfain~von  = tfait~von
+*                            AND tfait~spra = @sy-langu
+*      FIELDS tfain~*, tfait~spra, tfait~ltext
+*      WHERE tfain~ident = @calendar_id
+*      AND   tfain~jahr  = @year
+*      ORDER BY
+*        tfain~ident,
+*        tfain~jahr,
+*        tfain~von
+*      INTO CORRESPONDING FIELDS OF TABLE @result.
 
   ENDMETHOD.
 

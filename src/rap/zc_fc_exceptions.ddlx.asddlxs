@@ -13,11 +13,11 @@ annotate view ZC_FC_EXCEPTIONS with
     label: 'Sperrtage',
     position: 10
   } ]
-  @UI.lineItem: [ {
-    position: 10 ,
-    importance: #MEDIUM,
-    label: ''
-  } ]
+//  @UI.lineItem: [ {
+//    position: 10 ,
+//    importance: #MEDIUM,
+//    label: ''
+//  } ]
   @UI.identification: [ {
     position: 10 ,
     label: ''
@@ -25,14 +25,15 @@ annotate view ZC_FC_EXCEPTIONS with
   @UI.selectionField: [ {
     position: 10
   } ]
-  @Consumption.filter: { mandatory: true , selectionType: #SINGLE, multipleSelections: false }
+  @Consumption.filter: {mandatory: true , selectionType: #SINGLE, multipleSelections: false }
+  @Consumption.valueHelpDefinition: [{ entity:{ name: 'ZWS_I_SHOP_factory_calendar', element:'FactoryCalendar'} }]
   Ident;
 
-  @UI.lineItem: [ {
-    position: 20 ,
-    importance: #MEDIUM,
-    label: 'Jahr'
-  } ]
+//  @UI.lineItem: [ {
+//    position: 20 ,
+//    importance: #MEDIUM,
+//    label: 'Jahr'
+//  } ]
   @UI.identification: [ {
     position: 20 ,
     label: 'Jahr'

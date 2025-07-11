@@ -11,7 +11,6 @@ CLASS zcl_fc_maint_exceptions_app DEFINITION
         selkz TYPE abap_bool,
         von   TYPE string,
         bis   TYPE string,
-        wert  TYPE abap_bool,
         ltext TYPE tfait-ltext,
       END OF t_exception.
 
@@ -169,9 +168,10 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         class    = `sapUiSmallMarginBottom`
     ).
 
-    page->horizontal_layout(
-       )->simple_form( editable = abap_true
+    page->simple_form( editable = abap_true
        )->content( `form`
+       )->horizontal_layout(
+       )->vertical_layout( class = `sapUiSmallMarginEnd`
        )->label( text     = get_text_for( sales_area )
                  labelfor = `inputSalesArea`
                  required = abap_true
@@ -183,6 +183,8 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                  showvaluehelp    = abap_true
                  valuehelprequest = client->_event( `F4` )
        )->text( text = client->_bind( salesarea_text )
+       )->get_parent(
+       )->vertical_layout( class = `sapUiSmallMarginEnd`
        )->label( text     = get_text_for( calendarid )
                  labelfor = `inputCalId`
                  required = abap_true
@@ -194,6 +196,8 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                  showvaluehelp = abap_true
                  valuehelprequest = client->_event( `F4` )
        )->text( text = client->_bind( calendartext )
+       )->get_parent(
+       )->vertical_layout( class = `sapUiSmallMarginEnd`
        )->label( text     = get_text_for( VALUE jahr( ) )
                  labelfor = `inputYear`
                  required = abap_true
@@ -201,6 +205,8 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                  value     = client->_bind_edit( year )
                  maxlength = '4'
                  submit    = client->_event( `GO` )
+       )->get_parent(
+       )->vertical_layout( class = `sapUiSmallMarginEnd sapUiSmallMarginTop`
        )->button(
          text  = `Go`
          type  = `Emphasized`
@@ -235,14 +241,12 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
     table->columns(
         )->column( )->text( get_text_for( VALUE tfain-von( ) ) )->get_parent(
         )->column( )->text( get_text_for( VALUE tfain-bis( ) ) )->get_parent(
-        )->column( )->text( get_text_for( VALUE arbtag( ) ) )->get_parent(
         )->column( )->text( get_text_for( VALUE tfait-ltext( ) ) ).
 
     table->items( )->column_list_item( selected = `{SELKZ}`
         )->cells(
             )->date_picker( editable = client->_bind( editable ) value = `{VON}` placeholder = client->_bind( placeholder_von ) required = abap_true
             )->date_picker( editable = client->_bind( editable ) value = `{BIS}` placeholder = client->_bind( placeholder_bis ) required = abap_true
-            )->checkbox( editable = client->_bind( editable ) selected = `{WERT}`
             )->input( change = client->_event( 'TABLE_CHANGED' ) editable = client->_bind( editable ) value = `{LTEXT}` ).
 
     page->footer( )->overflow_toolbar(
@@ -316,12 +320,9 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
         factory_calendar->validate( ).
         factory_calendar->save_exceptions(
           VALUE #( FOR exception IN exceptions
-                   ( von   = date_in( exception-von )
-                     bis   = date_in( exception-bis )
-                     ltext = exception-ltext
-                     wert  = SWITCH #( exception-wert
-                               WHEN abap_true  THEN '1'
-                               WHEN abap_false THEN '0' ) ) ) ).
+                   ( von  = date_in( exception-von )
+                     bis  = date_in( exception-bis )
+                     text = exception-ltext ) ) ).
 
         dirty = abap_false.
 
@@ -405,8 +406,7 @@ CLASS zcl_fc_maint_exceptions_app IMPLEMENTATION.
                (
                  von   = |{ exception-von DATE = USER }|
                  bis   = |{ exception-bis DATE = USER }|
-                 ltext = exception-ltext
-                 wert  = xsdbool( exception-wert = '1' )
+                 ltext = exception-text
                ) ).
 
   ENDMETHOD.

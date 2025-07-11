@@ -24,7 +24,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZFC_MAINT</ARBGB>
      <MSGNR>003</MSGNR>
-     <TEXT>Change not possible for past yearst</TEXT>
+     <TEXT>Change not possible for past years</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -60,7 +60,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZFC_MAINT</ARBGB>
      <MSGNR>009</MSGNR>
-     <TEXT>Overlapping periods are not allowed</TEXT>
+     <TEXT>Overlapping periods are not allowed. Already maintained: &amp;1</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -135,7 +135,7 @@
     <item>
      <SPRSL>D</SPRSL>
      <MSGNR>009</MSGNR>
-     <TEXT>Überlappende Zeiträume sind nicht erlaubt</TEXT>
+     <TEXT>Überlappende Zeiträume sind nicht erlaubt. Bereits gepflegt: &amp;1</TEXT>
     </item>
     <item>
      <SPRSL>D</SPRSL>
